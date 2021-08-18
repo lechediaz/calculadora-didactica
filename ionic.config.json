@@ -1,0 +1,7 @@
+{
+  "name": "calculadora-didactica",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
