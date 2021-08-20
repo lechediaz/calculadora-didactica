@@ -1,0 +1,6 @@
+{
+	"appId": "calculadora.lechediaz",
+	"appName": "calculadora-didactica",
+	"webDir": "www",
+	"bundledWebRuntime": false
+}
