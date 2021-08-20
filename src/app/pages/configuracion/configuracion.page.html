@@ -1,0 +1,90 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Configuración</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-list>
+
+    <ion-item-group>
+      <ion-item-divider>
+        <ion-label>Dificultad por defecto</ion-label>
+      </ion-item-divider>
+      <ion-item [disabled]="guardando_configuracion || config.activar_dificultad_personalizada">
+        <ion-range #range_dificultad pin="true" snaps="true" ticks="true" min="1" max="4" color="danger"
+          [value]="config.dificultad" (ionChange)="onChangeDificultad(range_dificultad.value)">
+          <ion-label slot="start">1</ion-label>
+          <ion-label slot="end">4</ion-label>
+        </ion-range>
+      </ion-item>
+    </ion-item-group>
+
+    <ion-item-group>
+      <ion-item-divider>
+        <ion-label>Dificultad personalizada</ion-label>
+        <ion-toggle #toggle_dificultad_personalizada [disabled]="guardando_configuracion" slot="end"
+          [checked]="config.activar_dificultad_personalizada" color="secondary"
+          (ionChange)="onToggleActivarDificultadPersonalizada(toggle_dificultad_personalizada.checked)">
+        </ion-toggle>
+      </ion-item-divider>
+
+      <ion-list-header>
+        <ion-label>Rango terminos posibles</ion-label>
+      </ion-list-header>
+      <ion-item [disabled]="guardando_configuracion || !config.activar_dificultad_personalizada">
+        <ion-range #range_terminos pin="true" dualKnobs="true" snaps="true" ticks="true" min="-200" max="200" step="10"
+          color="danger"
+          [value]="{lower: config.dificultad_personalizada.valor_minimo, upper: config.dificultad_personalizada.valor_maximo}"
+          (ionChange)="onChangeTerminosPosibles(range_terminos.value)">
+          <ion-label slot="start">-200</ion-label>
+          <ion-label slot="end">200</ion-label>
+        </ion-range>
+      </ion-item>
+
+      <ion-list-header>
+        <ion-label>Operadores</ion-label>
+      </ion-list-header>
+      <ion-item>
+        <ion-label>Suma</ion-label>
+        <ion-checkbox #checkbox_suma color="warning"
+          [checked]="config.dificultad_personalizada.operadores.includes('+')"
+          [disabled]="guardando_configuracion || !config.activar_dificultad_personalizada"
+          (ionChange)="onChangeOperador('+', checkbox_suma.checked)">
+        </ion-checkbox>
+      </ion-item>
+      <ion-item>
+        <ion-label>Resta</ion-label>
+        <ion-checkbox #checkbox_resta color="warning"
+          [checked]="config.dificultad_personalizada.operadores.includes('-')"
+          [disabled]="guardando_configuracion || !config.activar_dificultad_personalizada"
+          (ionChange)="onChangeOperador('-', checkbox_resta.checked)">
+        </ion-checkbox>
+      </ion-item>
+      <ion-item>
+        <ion-label>Multiplicación</ion-label>
+        <ion-checkbox #checkbox_multiplicacion color="warning"
+          [checked]="config.dificultad_personalizada.operadores.includes('*')"
+          [disabled]="guardando_configuracion || !config.activar_dificultad_personalizada"
+          (ionChange)="onChangeOperador('*', checkbox_multiplicacion.checked)">
+        </ion-checkbox>
+      </ion-item>
+      <ion-item>
+        <ion-label>Divisiòn</ion-label>
+        <ion-checkbox #checkbox_division color="warning"
+          [checked]="config.dificultad_personalizada.operadores.includes('/')"
+          [disabled]="guardando_configuracion || !config.activar_dificultad_personalizada"
+          (ionChange)="onChangeOperador('/', checkbox_division.checked)">
+        </ion-checkbox>
+      </ion-item>
+
+    </ion-item-group>
+  </ion-list>
+
+  <ion-button [disabled]="guardando_configuracion" expand="block" (click)="onClickGuardarButton()"
+    *ngIf="mostrar_boton_guardar">Guardar</ion-button>
+
+</ion-content>

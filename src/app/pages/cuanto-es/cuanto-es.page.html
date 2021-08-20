@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>
+      ¿Cuánto es?
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <app-pantalla [operacion]="operacion"></app-pantalla>
+  <ion-grid>
+    <ion-row class="ion-text-center">
+      <ion-col *ngFor="let tecla of numeros.slice(0,3)" size="2">
+        <app-tecla [tecla]="tecla" (onTeclaPresionada)="onTeclaPresionada($event)">
+        </app-tecla>
+      </ion-col>
+      <ion-col size="6">
+        <app-tecla [tecla]="tecla_borrar" (onTeclaPresionada)="onClickBorrar($event)"></app-tecla>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-text-center">
+      <ion-col *ngFor="let tecla of numeros.slice(3,6)" size="2">
+        <app-tecla [tecla]="tecla" (onTeclaPresionada)="onTeclaPresionada($event)"></app-tecla>
+      </ion-col>
+      <ion-col size="6">
+        <app-tecla [tecla]="tecla_borrar_todo" (onTeclaPresionada)="onClickBorrarTodo($event)"></app-tecla>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-text-center">
+      <ion-col *ngFor="let tecla of numeros.slice(6,9)" size="2">
+        <app-tecla [tecla]="tecla" (onTeclaPresionada)="onTeclaPresionada($event)"></app-tecla>
+      </ion-col>
+      <ion-col size="6">
+        <app-tecla [tecla]="tecla_ok" (onTeclaPresionada)="onClickOK($event)"></app-tecla>
+      </ion-col>
+    </ion-row>
+    <ion-row class="ion-text-center">
+      <ion-col *ngFor="let tecla of numeros.slice(9,11)" size="2">
+        <app-tecla [tecla]="tecla" (onTeclaPresionada)="onTeclaPresionada($event)"></app-tecla>
+      </ion-col>
+      <ion-col size="2"></ion-col>
+      <ion-col size="6" *ngIf="config.mostrar_boton_generar">
+        <app-tecla [tecla]="tecla_generar" (onTeclaPresionada)="onClickGenerar($event)"></app-tecla>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>

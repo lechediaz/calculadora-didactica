@@ -1,0 +1,4 @@
+<ion-button [ngClass]="['tecla', tecla.boton]" color="secondary"
+  [expand]="tecla.boton === 'horizontal' ? 'block': undefined" shape="round" (click)="onClick(tecla)">
+  {{ tecla.texto }}
+</ion-button>
