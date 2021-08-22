@@ -1,5 +1,7 @@
+import { environment } from 'src/environments/environment';
+
 export class DificultadPersonalizadaModel {
-    valor_minimo: number = 0;
-    valor_maximo: number = 200;
-    operadores: string[] = ['+'];
+  operadores: string[] = ['+'];
+  valor_maximo: number = Math.ceil(environment.config.maxPossibleValue / 2);
+  valor_minimo: number = 0;
 }

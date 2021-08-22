@@ -3,12 +3,14 @@ import {
   ChangeDetectorRef,
   Component,
   OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { Platform, ToastController } from '@ionic/angular';
 import { RangeValue } from '@ionic/core';
+import { Subscription } from 'rxjs';
 import { ConfigModel } from 'src/app/models/config.model';
-import { DificultadPersonalizadaModel } from 'src/app/models/dificultad-personalizada.model';
 import { ConfigService } from 'src/app/services/config.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-configuracion',
@@ -16,10 +18,14 @@ import { ConfigService } from 'src/app/services/config.service';
   styleUrls: ['./configuracion.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ConfiguracionPage implements OnInit {
-  mostrar_boton_guardar: boolean = false;
-  guardando_configuracion: boolean = false;
-  config: ConfigModel = new ConfigModel();
+export class ConfiguracionPage implements OnInit, OnDestroy {
+  public readonly environment = environment;
+
+  private _suscripciones: Subscription = new Subscription();
+
+  config = new ConfigModel();
+  guardando_configuracion = false;
+  mostrar_boton_guardar = false;
 
   constructor(
     private platform: Platform,
@@ -30,11 +36,18 @@ export class ConfiguracionPage implements OnInit {
 
   ngOnInit() {
     this.platform.ready().then(() => {
-      this.configService.getConfig().then((config: ConfigModel) => {
-        this.config = config;
-        this.cd.detectChanges();
-      });
+      // Suscripciòn a cambios en la configuración.
+      this._suscripciones.add(
+        this.configService.$config.subscribe((config) => {
+          this.config = config;
+          this.cd.detectChanges();
+        })
+      );
     });
+  }
+
+  ngOnDestroy() {
+    this._suscripciones.unsubscribe();
   }
 
   onChangeDificultad = (dificultad: number | RangeValue) => {

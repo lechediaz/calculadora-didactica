@@ -3,7 +3,18 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  config: {
+    key: 'config',
+    maxPossibleValue: 150,
+    minPossibleValue: -150,
+    operators: [
+      { name: 'Suma', sign: '+' },
+      { name: 'Resta', sign: '-' },
+      { name: 'Multiplicación', sign: '*' },
+      { name: 'División', sign: '/' },
+    ],
+  },
 };
 
 /*
