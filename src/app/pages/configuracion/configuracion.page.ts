@@ -5,6 +5,7 @@ import {
   OnInit,
   OnDestroy,
 } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { Platform, ToastController } from '@ionic/angular';
 import { RangeValue } from '@ionic/core';
 import { Subscription } from 'rxjs';
@@ -28,19 +29,32 @@ export class ConfiguracionPage implements OnInit, OnDestroy {
   mostrar_boton_guardar = false;
 
   constructor(
-    private platform: Platform,
     private cd: ChangeDetectorRef,
-    private configService: ConfigService,
-    private toastController: ToastController
+    private platform: Platform,
+    private router: Router,
+    private toastController: ToastController,
+    private configService: ConfigService
   ) {}
 
   ngOnInit() {
     this.platform.ready().then(() => {
       // Suscripciòn a cambios en la configuración.
       this._suscripciones.add(
-        this.configService.$config.subscribe((config) => {
-          this.config = config;
-          this.cd.detectChanges();
+        this.configService.$configModificated.subscribe((configModificated) => {
+          this.config = configModificated;
+          this.cd.markForCheck();
+        })
+      );
+
+      this._suscripciones.add(
+        this.router.events.subscribe((eve) => {
+          if (
+            eve instanceof NavigationEnd &&
+            !eve.url.endsWith('configuracion') &&
+            this.configService.needSaveConfig
+          ) {
+            this.configService.configModificated = this.config;
+          }
         })
       );
     });
@@ -53,24 +67,34 @@ export class ConfiguracionPage implements OnInit, OnDestroy {
   onChangeDificultad = (dificultad: number | RangeValue) => {
     if (typeof dificultad === 'number') {
       this.config.dificultad = dificultad;
-      this.guardarConfiguracion();
+      this.configService.needSaveConfig = true;
     }
   };
 
   onToggleActivarDificultadPersonalizada = (activar: boolean) => {
     this.config.activar_dificultad_personalizada = activar;
-    this.guardarConfiguracion();
+    this.configService.needSaveConfig = true;
   };
 
   onChangeTerminosPosibles = (valores: any) => {
     this.config.dificultad_personalizada.valor_minimo = valores.lower;
     this.config.dificultad_personalizada.valor_maximo = valores.upper;
-    this.guardarConfiguracion();
+    this.configService.needSaveConfig = true;
   };
 
   onChangeOperador = (operador: string, seleccionado: boolean) => {
     if (seleccionado) {
-      this.config.dificultad_personalizada.operadores.push(operador);
+      const idxOperadorEncontrado =
+        this.config.dificultad_personalizada.operadores.findIndex(
+          (o) => o === operador
+        );
+
+      if (idxOperadorEncontrado < 0) {
+        this.config.dificultad_personalizada.operadores = [
+          ...this.config.dificultad_personalizada.operadores,
+          operador,
+        ];
+      }
     } else {
       this.config.dificultad_personalizada.operadores =
         this.config.dificultad_personalizada.operadores.filter(
@@ -89,12 +113,11 @@ export class ConfiguracionPage implements OnInit, OnDestroy {
       }
     }
 
-    this.guardarConfiguracion();
+    this.configService.needSaveConfig = true;
+    this.cd.markForCheck();
   };
 
-  onClickGuardarButton = () => {
-    this.guardarConfiguracion();
-  };
+  onClickGuardarButton = () => {};
 
   private guardarConfiguracion = () => {
     if (!this.guardando_configuracion) {

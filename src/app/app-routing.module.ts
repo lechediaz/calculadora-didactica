@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { SalirConfigGuard } from './pages/configuracion/salir-config.guard';
 
 const routes: Routes = [
   {
@@ -9,6 +10,7 @@ const routes: Routes = [
   },
   {
     path: 'configuracion',
+    canDeactivate: [SalirConfigGuard],
     loadChildren: () =>
       import('./pages/configuracion/configuracion.module').then(
         (m) => m.ConfiguracionPageModule
