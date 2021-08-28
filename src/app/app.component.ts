@@ -16,7 +16,7 @@ export class AppComponent implements OnInit {
     {
       title: '¿Cuánto es?',
       url: '/cuanto-es',
-      icon: 'home',
+      icon: 'calculator',
     },
     {
       title: 'Configuración',

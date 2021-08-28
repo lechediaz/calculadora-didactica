@@ -3,9 +3,10 @@ import { AlertController, Platform, ToastController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { PantallaModel } from '../../components/pantalla/pantalla.model';
 import { TeclaModel } from '../../components/tecla/tecla.model';
+import { ConfigNotSavedError } from 'src/app/models/config-not-saved.error';
 import { ConfigModel } from 'src/app/models/config.model';
 import { ConfigService } from 'src/app/services/config.service';
-import { HelpersService } from 'src/app/services/helpers.service';
+import { OperacionService } from 'src/app/services/operacion.service';
 
 @Component({
   selector: 'app-cuanto-es',
@@ -33,7 +34,7 @@ export class CuantoEsPage implements OnInit, OnDestroy {
   constructor(
     private platform: Platform,
     private configService: ConfigService,
-    private helpersService: HelpersService,
+    private operacionService: OperacionService,
     private alertController: AlertController,
     private toastController: ToastController
   ) {}
@@ -46,6 +47,7 @@ export class CuantoEsPage implements OnInit, OnDestroy {
       this._suscripciones.add(
         this.configService.$config.subscribe((config) => {
           this.config = config;
+          this.operacion = this.operacionService.crearOperacion(config);
         })
       );
     });
@@ -64,158 +66,205 @@ export class CuantoEsPage implements OnInit, OnDestroy {
     this.numeros.push(new TeclaModel('0'));
   };
 
+  /**
+   * Informa al usuario que la respuesta es correcta y realiza cambios en configuración si es necesario.
+   */
+  tratarRespuestaCorrecta = async () => {
+    const alert = await this.alertController.create({
+      header: '¡Correcto!',
+      message: 'Sigue así y pronto dominarás el tema.',
+      buttons: [
+        {
+          text: 'Siguiente',
+          handler: this.guardarRespuestaCorrecta,
+        },
+      ],
+    });
+
+    await alert.present();
+  };
+
+  /**
+   * Informa al usuario que la respuesta es incorrecta.
+   */
+  tratarRespuestaIncorrecta = async () => {
+    let mensaje: string;
+    let buttons = [];
+
+    const boton_intentar_de_nuevo = {
+      text: 'Reintentar',
+      handler: () => {
+        this.intentos++;
+      },
+    };
+
+    const boton_siguiente_operacion = {
+      text: 'Siguiente',
+      handler: () => {
+        this.intentos = 1;
+        this.operaciones_hechas++;
+        this.operaciones_incorrectas++;
+        this.operacion = this.operacionService.crearOperacion(this.config);
+      },
+    };
+
+    switch (this.intentos) {
+      case 1:
+        mensaje = 'No importa, intentalo de nuevo';
+        buttons.push(boton_intentar_de_nuevo);
+        break;
+      case 2:
+        mensaje = 'No te preocupes, ¡ya casi lo logras!';
+        buttons.push(boton_intentar_de_nuevo);
+        break;
+      case 3:
+        mensaje = 'Concentrate, ¡tú puedes!';
+        buttons.push(boton_intentar_de_nuevo);
+        break;
+      case 4:
+        mensaje = '¿Necesitas ayuda?, dile a un adulto que te explique';
+        buttons.push(boton_intentar_de_nuevo);
+        buttons.push(boton_siguiente_operacion);
+        break;
+      case 5:
+      default:
+        mensaje = 'Si quieres puedes intentar con otra operación';
+        buttons.push(boton_intentar_de_nuevo);
+        buttons.push(boton_siguiente_operacion);
+        break;
+    }
+
+    const alert = await this.alertController.create({
+      header: 'Incorrecto',
+      message: mensaje,
+      buttons,
+    });
+
+    await alert.present();
+  };
+
+  /**
+   * Permite guardar la respuesta correcta.
+   */
+  guardarRespuestaCorrecta = async () => {
+    this.intentos = 1;
+    this.operaciones_hechas++;
+    this.operaciones_correctas++;
+
+    // Aumentar nivel de dificultad
+
+    if (!this.config.activar_dificultad_personalizada) {
+      const preguntas_hechas_nivel =
+        this.operaciones_correctas + this.operaciones_incorrectas;
+      const porcentaje_Correctas = Math.floor(
+        (this.operaciones_correctas / preguntas_hechas_nivel) * 100
+      );
+
+      if (
+        this.config.dificultad < 4 &&
+        preguntas_hechas_nivel >= 10 &&
+        porcentaje_Correctas >= 60
+      ) {
+        try {
+          this.operaciones_correctas = 0;
+          this.operaciones_incorrectas = 0;
+
+          const newConfig = { ...this.config };
+
+          newConfig.dificultad++;
+
+          await this.configService.saveConfig(newConfig);
+
+          const toast = await this.toastController.create({
+            message: `Dificultad aumentada a ${newConfig.dificultad}`,
+            duration: 4000,
+          });
+
+          await toast.present();
+        } catch (error) {
+          let message = `Ha ocurrido un error mientras se aumentaba la dificultad.`;
+
+          if (error instanceof ConfigNotSavedError) {
+            message = error.message;
+          }
+
+          const toast = await this.toastController.create({
+            message,
+            duration: 5000,
+          });
+
+          await toast.present();
+        }
+      } else {
+        this.operacion = this.operacionService.crearOperacion(this.config);
+      }
+    } else {
+      this.operacion = this.operacionService.crearOperacion(this.config);
+    }
+  };
+
+  /**
+   * Evento que se dispara cuando se presiona una tecla numérica de la calculadora.
+   * @param teclaPresionada tecla numérica presionada de la calculadora.
+   */
   onTeclaPresionada = (teclaPresionada: TeclaModel) => {
+    const { texto } = teclaPresionada;
+    let { resultado } = this.operacion;
+
     if (
-      (this.operacion.resultado.length === 0 &&
-        teclaPresionada.texto === '0') ||
-      (this.operacion.resultado.length > 0 && teclaPresionada.texto === '-')
+      (texto === '0' && resultado.startsWith('0')) ||
+      (resultado.length > 0 && texto === '-')
     ) {
       return;
     }
 
-    this.operacion.resultado += teclaPresionada.texto;
+    if (resultado.startsWith('0')) {
+      resultado = '';
+    }
+
+    this.operacion.resultado = `${resultado}${texto}`;
   };
 
-  onClickOK = (teclaPresionada: TeclaModel) => {
-    this.helpersService.resolverOperacion(this.operacion).then(
-      (resultado) => {
-        if (this.operacion.resultado.length === 0) {
-          this.alertController
-            .create({
-              header: 'Escribe el resultado',
-              message: 'Por favor escribe el resultado de la operación',
-              buttons: [
-                {
-                  text: 'Ok',
-                },
-              ],
-            })
-            .then((alert) => alert.present());
-        } else if (this.operacion.resultado === resultado.toString()) {
-          this.alertController
-            .create({
-              header: '¡Correcto!',
-              message: 'Sigue así y pronto dominarás el tema.',
-              buttons: [
-                {
-                  text: 'Siguiente',
-                  handler: () => {
-                    this.intentos = 1;
-                    this.operaciones_hechas++;
-                    this.operaciones_correctas++;
+  /**
+   * Evento que se dispara cuando se presiona la tecla 'OK'.
+   * @param teclaPresionada Tecla 'OK'.
+   */
+  onClickOK = async (teclaPresionada: TeclaModel) => {
+    try {
+      if (this.operacion.resultado.length === 0) {
+        const alert = await this.alertController.create({
+          header: 'Escribe el resultado',
+          message: 'Por favor escribe el resultado de la operación',
+          buttons: [{ text: 'Ok' }],
+        });
 
-                    // Aumentar nivel de dificultad
+        await alert.present();
+      } else {
+        const resultado = this.operacionService.resolverOperacion(
+          this.operacion
+        );
 
-                    const preguntas_hechas_nivel =
-                      this.operaciones_correctas + this.operaciones_incorrectas;
-                    const porcentaje_Correctas = Math.floor(
-                      (this.operaciones_correctas / preguntas_hechas_nivel) *
-                        100
-                    );
-
-                    if (
-                      this.config.dificultad < 4 &&
-                      preguntas_hechas_nivel >= 10 &&
-                      porcentaje_Correctas >= 80
-                    ) {
-                      this.config.dificultad++;
-                      this.operaciones_correctas = 0;
-                      this.operaciones_incorrectas = 0;
-
-                      this.configService
-                        .saveConfig(this.config)
-                        .then(() => {
-                          this.toastController
-                            .create({
-                              message: `Dificultad aumentada a ${this.config.dificultad}`,
-                              duration: 4000,
-                            })
-                            .then((toast) => {
-                              toast.present();
-                            });
-                        })
-                        .catch(() => {
-                          this.toastController
-                            .create({
-                              message: `Error guardando la configuración`,
-                              duration: 5000,
-                            })
-                            .then((toast) => {
-                              toast.present();
-                            });
-                        });
-                    }
-
-                    this.operacion = this.helpersService.crearOperacion(
-                      this.config.dificultad
-                    );
-                  },
-                },
-              ],
-            })
-            .then((alert) => alert.present());
+        if (this.operacion.resultado === resultado.toString()) {
+          await this.tratarRespuestaCorrecta();
         } else {
-          let mensaje: string;
-          let buttons = [];
-
-          const boton_intentar_de_nuevo = {
-            text: 'Reintentar',
-            handler: () => {
-              this.intentos++;
-            },
-          };
-
-          const boton_siguiente_operacion = {
-            text: 'Siguiente',
-            handler: () => {
-              this.intentos = 1;
-              this.operaciones_hechas++;
-              this.operaciones_incorrectas++;
-              this.operacion = this.helpersService.crearOperacion(
-                this.config.dificultad
-              );
-            },
-          };
-
-          switch (this.intentos) {
-            case 1:
-              mensaje = 'No importa, intentalo de nuevo';
-              buttons.push(boton_intentar_de_nuevo);
-              break;
-            case 2:
-              mensaje = 'No te preocupes, ¡ya casi lo logras!';
-              buttons.push(boton_intentar_de_nuevo);
-              break;
-            case 3:
-              mensaje = 'Concentrate, ¡tú puedes!';
-              buttons.push(boton_intentar_de_nuevo);
-              break;
-            case 4:
-              mensaje = '¿necesitas ayuda?, dile a un adulto que te explique';
-              buttons.push(boton_intentar_de_nuevo);
-              buttons.push(boton_siguiente_operacion);
-              break;
-            case 5:
-            default:
-              mensaje = 'Si quieres puedes intentar con otra operación';
-              buttons.push(boton_intentar_de_nuevo);
-              buttons.push(boton_siguiente_operacion);
-              break;
-          }
-
-          this.alertController
-            .create({
-              header: 'Incorrecto',
-              message: mensaje,
-              buttons,
-            })
-            .then((alert) => alert.present());
+          await this.tratarRespuestaIncorrecta();
         }
-      },
-      (error) => console.log(error)
-    );
+      }
+    } catch (error) {
+      const toast = await this.toastController.create({
+        message:
+          'Oops, ha ocurrido un problema inesperado, por faovr intenta de nuevo.',
+        duration: 4000,
+      });
+
+      await toast.present();
+    }
   };
 
+  /**
+   * Evento que se dispara cuando se presiona la tecla 'Borrar todo'
+   * @param teclaPresionada Tecla 'Borrar todo'.
+   */
   onClickBorrarTodo = (teclaPresionada: TeclaModel) => {
     if (this.operacion.resultado.length === 0) {
       return;
@@ -224,6 +273,10 @@ export class CuantoEsPage implements OnInit, OnDestroy {
     this.operacion.resultado = '';
   };
 
+  /**
+   * Evento que se dispara cuando se presiona la tecla 'Borrar.
+   * @param teclaPresionada Techa 'Borrar'.
+   */
   onClickBorrar = (teclaPresionada: TeclaModel) => {
     if (this.operacion.resultado.length === 0) {
       return;
@@ -235,8 +288,12 @@ export class CuantoEsPage implements OnInit, OnDestroy {
     );
   };
 
+  /**
+   * Evento que se dispara cuando se presiona la tecla 'Generar.
+   * @param teclaPresionada Techa 'Generar'.
+   */
   onClickGenerar = (teclaPresionada: TeclaModel) => {
     this.intentos = 1;
-    this.operacion = this.helpersService.crearOperacion(this.config.dificultad);
+    this.operacion = this.operacionService.crearOperacion(this.config);
   };
 }

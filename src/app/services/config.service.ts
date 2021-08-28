@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { LoadingController, Platform } from '@ionic/angular';
 import { NativeStorage } from '@ionic-native/native-storage/ngx';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { ConfigModel } from '../models/config.model';
 import { ConfigNotFoundError } from '../models/config-not-found.error';
+import { ConfigNotSavedError } from '../models/config-not-saved.error';
+import { ConfigModel } from '../models/config.model';
 import { environment } from 'src/environments/environment';
 
 @Injectable({
@@ -179,7 +180,7 @@ export class ConfigService {
 
       await this.nativeStorage.setItem('config', config);
     } catch (error) {
-      throw new Error(
+      throw new ConfigNotSavedError(
         'Ocurrió un error guardando la configuración en el dispositivo.'
       );
     }
@@ -195,7 +196,7 @@ export class ConfigService {
 
       localStorage.setItem('config', JSON.stringify(config));
     } catch (error) {
-      throw new Error(
+      throw new ConfigNotSavedError(
         'Ocurrió un error guardando la configuración en el navegador.'
       );
     }
